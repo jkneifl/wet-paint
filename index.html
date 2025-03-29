@@ -3,27 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Wheel of Fortune - Songs</title>
-  <style type="text/css">
-    * {
-      box-sizing: border-box;
-    }
+  <title>Wet Paint Wheel</title>
+  <style>
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Helvetica, Arial, sans-serif;
       background: #f7f7f7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     #chart {
-      position: relative;
-      width: 100vw;
-      height: 100vw;
+      width: 100%;
       max-width: 500px;
-      max-height: 500px;
-      margin: 0 auto;
+      aspect-ratio: 1 / 1;
     }
     #question {
-      text-align: center;
+      max-width: 500px;
+      width: 90%;
       padding: 1em;
+      text-align: center;
     }
     #question h1 {
       font-size: 1.5em;
@@ -34,16 +34,8 @@
       margin: 0;
     }
     svg {
-      display: block;
-      margin: 0 auto;
-    }
-    @media (max-width: 500px) {
-      #question h1 {
-        font-size: 1.2em;
-      }
-      #question p {
-        font-size: 0.9em;
-      }
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -54,57 +46,60 @@
     <p id="details"></p>
   </div>
 
-  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script src="https://d3js.org/d3.v3.min.js"></script>
   <script>
+    const data = [
+      { label: "Adolescent", full: "Fluorescent Adolescent - Arctic Monkeys", bpm: 120, chords: "E - G#m - C#m - A" },
+      { label: "Wild Child", full: "Wild Child - C", bpm: 116, chords: "C - G - Am - F" },
+      { label: "Jenny", full: "Jenny Don't Be Hasty - Paolo Nutini", bpm: 144, chords: "A - D - E" },
+      { label: "Boxes", full: "Books From Boxes - Maxïmo Park", bpm: 132, chords: "F#m - D - A - E" },
+      { label: "Bad Guy", full: "Bad Guy - Billie Eilish", bpm: 135, chords: "Am - Dm - E" },
+      { label: "Word Up", full: "Word Up! - Cameo", bpm: 110, chords: "Em - C - D" },
+      { label: "Gentleman", full: "Gentleman of the Year - Beatsteaks", bpm: 170, chords: "C - G - F - A#" },
+      { label: "Submarines", full: "Little Black Submarines - The Black Keys", bpm: 130, chords: "Am - C - G - D" },
+      { label: "Wicked Game", full: "Wicked Game - Chris Isaak", bpm: 104, chords: "Bm - A - E" },
+      { label: "Dirtbag", full: "Teenage Dirtbag - Wheatus", bpm: 97, chords: "E - A - B" },
+      { label: "Englishman", full: "Englishman In New York - Sting", bpm: 94, chords: "D - G - A" },
+      { label: "Blonde", full: "Blonde Chaya - ???", bpm: 120, chords: "C - F - G" },
+      { label: "Red Morning", full: "Red Morning Light - Kings of Leon", bpm: 148, chords: "D - A - G" },
+      { label: "Reptilia", full: "Reptilia - The Strokes", bpm: 160, chords: "C - G - F" },
+      { label: "Dance", full: "Lose Yourself to Dance - Daft Punk ft. Pharrell", bpm: 100, chords: "Bm - E - A" },
+      { label: "This Love", full: "This Love - Maroon 5", bpm: 95, chords: "C#m - A - E - B" },
+      { label: "Call Me", full: "Why'd You Only Call Me When You're High? - Arctic Monkeys", bpm: 104, chords: "Em - G - D - A" },
+      { label: "Lay Down", full: "Lay Down - DMA's", bpm: 132, chords: "A - E - F#m - D" },
+      { label: "Otherside", full: "Otherside - RHCP", bpm: 90, chords: "Am - F - C - G" },
+      { label: "September", full: "September - Earth, Wind & Fire", bpm: 126, chords: "F#m - D - E" },
+      { label: "Easy Lover", full: "Easy Lover - Philip Bailey & Phil Collins", bpm: 132, chords: "C - Em - F - G" },
+      { label: "Naive", full: "Naive - The Kooks", bpm: 150, chords: "D - G - A - Bm" },
+      { label: "Crawling", full: "Crawling - Linkin Park", bpm: 95, chords: "Cm - Ab - Bb" },
+      { label: "Blurry", full: "Blurry - Puddle of Mudd", bpm: 78, chords: "D - A - Bm - G" },
+      { label: "Burning", full: "Burning - ???", bpm: 122, chords: "F - C - Gm - Bb" },
+      { label: "Little Sister", full: "Little Sister - QOTSA", bpm: 160, chords: "F - C - D# - G#" },
+      { label: "Dancefloor", full: "Murder On The Dancefloor - Sophie Ellis-Bextor", bpm: 121, chords: "Gm - Eb - Bb - F" },
+      { label: "White Ocean", full: "Wet Paint - White Ocean", bpm: 126, chords: "E - G - C" },
+      { label: "DLOT", full: "Wet Paint - DLOT", bpm: 90, chords: "Em7 - A / Bm - A - G - A" },
+      { label: "Train", full: "Wet Paint - Train", bpm: 84, chords: "??" }
+    ];
+
     const padding = { top: 20, right: 40, bottom: 0, left: 0 },
           w = 500 - padding.left - padding.right,
           h = 500 - padding.top - padding.bottom,
           r = Math.min(w, h) / 2,
           color = d3.scale.category20();
 
-    let rotation = 0,
-        oldrotation = 0,
-        picked = 100000,
-        oldpick = [];
-
-    const data = [
-  { label: "Adolescent", full: "Fluorescent Adolescent - Arctic Monkeys", bpm: 120, chords: "E - G#m - C#m - A" },
-  { label: "Wild Child", full: "Wild Child - C", bpm: 116, chords: "C - G - Am - F" },
-  { label: "Jenny", full: "Jenny Don't Be Hasty - Paolo Nutini", bpm: 144, chords: "A - D - E" },
-  { label: "Boxes", full: "Books From Boxes - Maxïmo Park", bpm: 132, chords: "F#m - D - A - E" },
-  { label: "Bad Guy", full: "Bad Guy - Billie Eilish", bpm: 135, chords: "Am - Dm - E" },
-  { label: "Word Up", full: "Word Up! - Cameo", bpm: 110, chords: "Em - C - D" },
-  { label: "Gentleman", full: "Gentleman of the Year - Beatsteaks", bpm: 170, chords: "C - G - F - A#" },
-  { label: "Submarines", full: "Little Black Submarines - The Black Keys", bpm: 130, chords: "Am - C - G - D" },
-  { label: "Wicked Game", full: "Wicked Game - Chris Isaak", bpm: 104, chords: "Bm - A - E" },
-  { label: "Dirtbag", full: "Teenage Dirtbag - Wheatus", bpm: 97, chords: "E - A - B" },
-  { label: "Englishman", full: "Englishman In New York - Sting", bpm: 94, chords: "D - G - A" },
-  { label: "Blonde", full: "Blonde Chaya - ???", bpm: 120, chords: "C - F - G" },
-  { label: "Red Morning", full: "Red Morning Light - Kings of Leon", bpm: 148, chords: "D - A - G" },
-  { label: "Reptilia", full: "Reptilia - The Strokes", bpm: 160, chords: "C - G - F" },
-  { label: "Dance", full: "Lose Yourself to Dance - Daft Punk ft. Pharrell", bpm: 100, chords: "Bm - E - A" },
-  { label: "This Love", full: "This Love - Maroon 5", bpm: 95, chords: "C#m - A - E - B" },
-  { label: "Call Me", full: "Why'd You Only Call Me When You're High? - Arctic Monkeys", bpm: 104, chords: "Em - G - D - A" },
-  { label: "Lay Down", full: "Lay Down - DMA's", bpm: 132, chords: "A - E - F#m - D" },
-  { label: "Otherside", full: "Otherside - Red Hot Chili Peppers", bpm: 90, chords: "Am - F - C - G" },
-  { label: "September", full: "September - Earth, Wind & Fire", bpm: 126, chords: "F#m - D - E" },
-  { label: "Easy Lover", full: "Easy Lover - Philip Bailey & Phil Collins", bpm: 132, chords: "C - Em - F - G" },
-  { label: "Naive", full: "Naive - The Kooks", bpm: 150, chords: "D - G - A - Bm" },
-  { label: "Crawling", full: "Crawling - Linkin Park", bpm: 95, chords: "Cm - Ab - Bb" },
-  { label: "Blurry", full: "Blurry - Puddle of Mudd", bpm: 78, chords: "D - A - Bm - G" },
-  { label: "Burning", full: "Burning - ???", bpm: 122, chords: "F - C - Gm - Bb" },
-  { label: "Little Sister", full: "Little Sister - Queens of the Stone Age", bpm: 160, chords: "F - C - D# - G#" },
-  { label: "Dancefloor", full: "Murder On The Dancefloor - Sophie Ellis-Bextor", bpm: 121, chords: "Gm - Eb - Bb - F" },
-  { label: "White Ocean", full: "Wet Paint - White Ocean", bpm: 126, chords: "E - G - C" },
-  { label: "DLOT", full: "Wet Paint - DLOT", bpm: 90, chords: "Em7 - A / Bm - A - G - A" },
-  { label: "Train", full: "Wet Paint - Train", bpm: 84, chords: "??" }
-];
+    let rotation = 0, oldrotation = 0, picked = 100000, oldpick = [];
 
     const svg = d3.select('#chart')
-      .append("svg")
-      .data([data])
-      .attr("width", w + padding.left + padding.right)
-      .attr("height", h + padding.top + padding.bottom);
+        .append("svg")
+        .attr("viewBox", `0 0 ${w + padding.left + padding.right} ${h + padding.top + padding.bottom}`)
+        .attr("preserveAspectRatio", "xMidYMid meet");
+
+        // Add pointer arrow
+        svg.append("g")
+        .attr("transform", `translate(${w + padding.left + padding.right}, ${(h / 2) + padding.top})`)
+        .append("path")
+        .attr("d", `M-${r * 0.15},0L0,${r * 0.05}L0,-${r * 0.05}Z`)
+        .style({ fill: "black" });
 
     const container = svg.append("g")
       .attr("class", "chartholder")
@@ -115,9 +110,8 @@
     const arc = d3.svg.arc().outerRadius(r);
 
     const arcs = vis.selectAll("g.slice")
-      .data(pie)
-      .enter()
-      .append("g")
+      .data(pie(data))
+      .enter().append("g")
       .attr("class", "slice");
 
     arcs.append("path")
@@ -126,75 +120,45 @@
 
     arcs.append("text")
       .attr("transform", function (d) {
-        d.innerRadius = 0;
-        d.outerRadius = r;
+        d.innerRadius = 0; d.outerRadius = r;
         d.angle = (d.startAngle + d.endAngle) / 2;
-        return `rotate(${d.angle * 180 / Math.PI - 90})translate(${d.outerRadius - 10})`;
+        return `rotate(${d.angle * 180 / Math.PI - 90})translate(${r - 10})`;
       })
       .attr("text-anchor", "end")
+      .style("font-size", "10px")
       .text((d, i) => data[i].label);
 
     container.on("click", spin);
 
     function spin() {
-      container.on("click", null);
       if (oldpick.length === data.length) return;
 
       const ps = 360 / data.length;
       const rng = Math.floor((Math.random() * 1440) + 360);
-      rotation = (Math.round(rng / ps) * ps);
-      picked = Math.round(data.length - (rotation % 360) / ps);
-      picked = picked >= data.length ? picked % data.length : picked;
+      rotation = Math.round(rng / ps) * ps;
+      picked = Math.round(data.length - (rotation % 360) / ps) % data.length;
 
-      if (oldpick.includes(picked)) {
-        spin();
-        return;
-      } else {
-        oldpick.push(picked);
-      }
-
+      if (oldpick.includes(picked)) { spin(); return; }
+      oldpick.push(picked);
       rotation += 90 - Math.round(ps / 2);
 
-      vis.transition()
-        .duration(3000)
-        .attrTween("transform", rotTween)
+      vis.transition().duration(3000)
+        .attrTween("transform", () => d3.interpolateString(`rotate(${oldrotation})`, `rotate(${rotation})`))
         .each("end", () => {
-          d3.select(".slice:nth-child(" + (picked + 1) + ") path")
-            .attr("fill", "#111");
-
           d3.select("#question h1").text(data[picked].full);
           d3.select("#details").text(`BPM: ${data[picked].bpm} | Chords: ${data[picked].chords}`);
-
           oldrotation = rotation;
-          container.on("click", spin);
         });
     }
 
-    svg.append("g")
-      .attr("transform", `translate(${w + padding.left + padding.right},${(h / 2) + padding.top})`)
-      .append("path")
-      .attr("d", `M-${r * .15},0L0,${r * .05}L0,-${r * .05}Z`)
-      .style({ fill: "black" });
-
     container.append("circle")
-      .attr("cx", 0)
-      .attr("cy", 0)
-      .attr("r", 60)
+      .attr("cx", 0).attr("cy", 0).attr("r", 60)
       .style({ fill: "white", cursor: "pointer" });
 
     container.append("text")
-      .attr("x", 0)
-      .attr("y", 15)
-      .attr("text-anchor", "middle")
+      .attr("x", 0).attr("y", 15).attr("text-anchor", "middle")
       .text("Wet Paint")
       .style({ "font-weight": "bold", "font-size": "20px" });
-
-    function rotTween() {
-      const i = d3.interpolate(oldrotation % 360, rotation);
-      return function (t) {
-        return `rotate(${i(t)})`;
-      };
-    }
   </script>
 </body>
 </html>
