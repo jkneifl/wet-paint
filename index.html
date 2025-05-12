@@ -33,6 +33,12 @@
       font-size: 1em;
       margin: 0;
     }
+    button {
+      margin-top: 1em;
+      padding: 0.5em 1.5em;
+      font-size: 1em;
+      cursor: pointer;
+    }
     svg {
       width: 100%;
       height: 100%;
@@ -45,6 +51,7 @@
     <h1></h1>
     <p id="details"></p>
   </div>
+  <button id="resetBtn">Reset All</button>
 
   <script src="https://d3js.org/d3.v3.min.js"></script>
   <script>
@@ -81,21 +88,22 @@
       { label: "Train", full: "Wet Paint - Train", bpm: 84, chords: "??" }
     ];
 
+    data.forEach(d => d.clicked = false);
+
     const padding = { top: 20, right: 40, bottom: 0, left: 0 },
           w = 500 - padding.left - padding.right,
           h = 500 - padding.top - padding.bottom,
           r = Math.min(w, h) / 2,
           color = d3.scale.category20();
 
-    let rotation = 0, oldrotation = 0, picked = 100000, oldpick = [];
+    let rotation = 0, oldrotation = 0, isSpinning = false;
 
     const svg = d3.select('#chart')
         .append("svg")
         .attr("viewBox", `0 0 ${w + padding.left + padding.right} ${h + padding.top + padding.bottom}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
 
-        // Add pointer arrow
-        svg.append("g")
+    svg.append("g")
         .attr("transform", `translate(${w + padding.left + padding.right}, ${(h / 2) + padding.top})`)
         .append("path")
         .attr("d", `M-${r * 0.15},0L0,${r * 0.05}L0,-${r * 0.05}Z`)
@@ -115,8 +123,15 @@
       .attr("class", "slice");
 
     arcs.append("path")
-      .attr("fill", (d, i) => color(i))
-      .attr("d", arc);
+      .attr("d", arc)
+      .attr("fill", (d, i) => data[i].clicked ? "#ccc" : color(i))
+      .on("click", function (d, i) {
+        d3.event.stopPropagation(); // prevent spin
+        data[i].clicked = !data[i].clicked;
+        d3.select(this)
+          .transition().duration(300)
+          .attr("fill", data[i].clicked ? "#ccc" : color(i));
+      });
 
     arcs.append("text")
       .attr("transform", function (d) {
@@ -131,23 +146,31 @@
     container.on("click", spin);
 
     function spin() {
-      if (oldpick.length === data.length) return;
+      if (isSpinning) return;
+      const available = data.map((d, i) => !d.clicked ? i : null).filter(i => i !== null);
+      if (available.length === 0) return;
 
       const ps = 360 / data.length;
-      const rng = Math.floor((Math.random() * 1440) + 360);
-      rotation = Math.round(rng / ps) * ps;
-      picked = Math.round(data.length - (rotation % 360) / ps) % data.length;
+      const i = available[Math.floor(Math.random() * available.length)];
+      const angle = 90 - (i * ps + ps / 2); // adjust for arrow on the right
+      const rounds = Math.floor(Math.random() * 5) + 5;
+      const finalRotation = rounds * 360 + angle;
 
-      if (oldpick.includes(picked)) { spin(); return; }
-      oldpick.push(picked);
-      rotation += 90 - Math.round(ps / 2);
-
+      isSpinning = true;
       vis.transition().duration(3000)
-        .attrTween("transform", () => d3.interpolateString(`rotate(${oldrotation})`, `rotate(${rotation})`))
+        .attrTween("transform", () =>
+          d3.interpolateString(`rotate(${oldrotation})`, `rotate(${finalRotation})`)
+        )
         .each("end", () => {
-          d3.select("#question h1").text(data[picked].full);
-          d3.select("#details").text(`BPM: ${data[picked].bpm} | Chords: ${data[picked].chords}`);
-          oldrotation = rotation;
+          oldrotation = finalRotation % 360;
+          data[i].clicked = true;
+
+          vis.selectAll("path")
+            .attr("fill", (d, j) => data[j].clicked ? "#ccc" : color(j));
+
+          d3.select("#question h1").text(data[i].full);
+          d3.select("#details").text(`BPM: ${data[i].bpm} | Chords: ${data[i].chords}`);
+          isSpinning = false;
         });
     }
 
@@ -159,6 +182,13 @@
       .attr("x", 0).attr("y", 15).attr("text-anchor", "middle")
       .text("Wet Paint")
       .style({ "font-weight": "bold", "font-size": "20px" });
+
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      data.forEach(d => d.clicked = false);
+      d3.selectAll(".slice path")
+        .transition().duration(300)
+        .attr("fill", (d, i) => color(i));
+    });
   </script>
 </body>
 </html>
